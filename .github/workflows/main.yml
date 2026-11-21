@@ -1,0 +1,48 @@
+name: Build Mod
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find and unzip sources
+        run: |
+          ZIP=$(find . -maxdepth 1 -name "*.zip" | head -1)
+          echo "Found ZIP: $ZIP"
+          unzip "$ZIP" -d unpacked
+
+      - name: Find gradle root
+        run: |
+          ROOT=$(find unpacked -name "build.gradle" | head -1 | xargs dirname)
+          echo "GRADLE_ROOT=$ROOT" >> $GITHUB_ENV
+          echo "Gradle root: $ROOT"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.1.1'
+
+      - name: Build
+        run: gradle build
+        working-directory: ${{ env.GRADLE_ROOT }}
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: realisticexplosions-jar
+          path: ${{ env.GRADLE_ROOT }}/build/libs/*.jar
+          if-no-files-found: errorс
